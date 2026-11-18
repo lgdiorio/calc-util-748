@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orçamento 3D Pro — Calculadora & Negociação</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              400: '#fb923c',
+              500: '#f97316',
+              600: '#ea580c',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar & range slider styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.4);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.4);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(249, 115, 22, 0.7);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 8px;
+      border-radius: 9999px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      margin-top: -6px;
+      background-color: #f97316;
+      height: 20px;
+      width: 20px;
+      border-radius: 9999px;
+      border: 2px solid #ffffff;
+      box-shadow: 0 2px 8px rgba(249, 115, 22, 0.5);
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    .pulse-border {
+      animation: pulseBorder 2s infinite;
+    }
+    @keyframes pulseBorder {
+      0%, 100% { border-color: rgba(249, 115, 22, 0.4); }
+      50% { border-color: rgba(249, 115, 22, 0.95); }
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen selection:bg-orange-500 selection:text-white">
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Top Navigation Bar -->
+  <header class="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
+          <!-- 3D Cube / Extruder Icon -->
+          <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-extrabold tracking-tight text-white">Orçamento <span class="text-orange-400">3D Pro</span></h1>
+            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              Planilha + IA OCR
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">Extração via print do fatiador & margem dinâmica de negociação</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Quick Paste Hint Badge -->
+        <div class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-400">
+          <span>Cole o print a qualquer momento:</span>
+          <kbd class="px-1.5 py-0.5 text-[11px] font-mono font-semibold text-orange-400 bg-slate-800 border border-slate-700 rounded">Ctrl + V</kbd>
+        </div>
+
+        <!-- Settings Drawer Toggle -->
+        <button id="btn-open-settings" type="button" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 text-sm font-medium transition shadow-sm">
+          <svg class="w-4 h-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span>Custos Base</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+
+      <!-- LEFT COLUMN (7 cols on lg): Screenshot OCR + Part Inputs + Negotiation Panel -->
+      <div class="lg:col-span-7 flex flex-col gap-6">
+
+        <!-- 1. Slicer Screenshot OCR Dropzone -->
+        <section class="rounded-2xl bg-slate-900/90 border border-slate-800 p-5 sm:p-6 shadow-xl">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div class="flex items-center gap-2.5">
+              <span class="w-7 h-7 rounded-lg bg-orange-500/15 text-orange-400 flex items-center justify-center font-mono text-xs font-bold border border-orange-500/30">01</span>
+              <h2 class="text-base sm:text-lg font-bold text-white">Leitura Automática do Print (Fatiador)</h2>
+            </div>
+            <span class="text-xs text-slate-400">Bambu Studio, OrcaSlicer, Cura, Prusa, Creality</span>
+          </div>
+
+          <!-- Dropzone Area -->
+          <div id="dropzone" tabindex="0" class="relative group rounded-xl border-2 border-dashed border-slate-700 hover:border-orange-500/70 focus:border-orange-500 bg-slate-950/60 p-5 transition-all cursor-pointer outline-none">
+            <input type="file" id="file-input" accept="image/*" class="hidden" />
+
+            <!-- Empty State -->
+            <div id="dropzone-empty" class="flex flex-col items-center justify-center text-center py-3">
+              <div class="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 group-hover:border-orange-500/40 group-hover:bg-orange-500/10 flex items-center justify-center mb-3 transition">
+                <svg class="w-6 h-6 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <p class="text-sm font-semibold text-slate-200">
+                Pressione <span class="text-orange-400 font-mono bg-orange-500/10 px-1.5 py-0.5 rounded border border-orange-500/20">Ctrl + V</span> para colar o print do fatiador
+              </p>
+              <p class="text-xs text-slate-400 mt-1">
+                Ou arraste e solte a imagem aqui, ou <span class="text-orange-400 underline font-medium">clique para selecionar</span>
+              </p>
+            </div>
+
+            <!-- Preview + OCR Status State -->
+            <div id="dropzone-preview" class="hidden">
+              <div class="flex flex-col sm:flex-row items-center gap-4">
+                <div class="relative w-full sm:w-44 h-28 rounded-lg overflow-hidden border border-slate-700 bg-slate-900 shrink-0">
+                  <img id="preview-img" src="" alt="Print do fatiador" class="w-full h-full object-contain" />
+                  <!-- Loading Overlay -->
+                  <div id="ocr-loading" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-xs flex flex-col items-center justify-center gap-2 p-2 text-center">
+                    <svg class="animate-spin h-6 w-6 text-orange-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="text-[11px] font-semibold text-orange-300">Lendo dados com IA...</span>
+                  </div>
+                </div>
+
+                <div class="flex-1 w-full flex flex-col justify-between gap-2">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span id="ocr-badge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                        ✓ Dados extraídos
+                      </span>
+                      <span id="ocr-slicer-tag" class="text-xs text-slate-400 font-mono"></span>
+                    </div>
+                    <p id="ocr-summary-text" class="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                      Confira os valores preenchidos abaixo ou reanalise a imagem se necessário.
+                    </p>
+                  </div>
+
+                  <div class="flex flex-wrap items-center gap-2 pt-1">
+                    <button id="btn-reanalyze" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/15 hover:bg-orange-500/25 text-orange-300 border border-orange-500/30 text-xs font-semibold transition">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Reanalisar Print
+                    </button>
+                    <button id="btn-clear-image" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition">
+                      Remover Imagem
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. Part Parameters Input -->
+        <section class="rounded-2xl bg-slate-900/90 border border-slate-800 p-5 sm:p-6 shadow-xl">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-5">
+            <div class="flex items-center gap-2.5">
+              <span class="w-7 h-7 rounded-lg bg-orange-500/15 text-orange-400 flex items-center justify-center font-mono text-xs font-bold border border-orange-500/30">02</span>
+              <h2 class="text-base sm:text-lg font-bold text-white">Dados da Impressão (Peça Atual)</h2>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="btn-load-example" type="button" class="text-xs text-slate-400 hover:text-orange-400 underline transition">
+                Exemplo Planilha (135g / 8h)
+              </button>
+              <span class="text-slate-700">•</span>
+              <button id="btn-reset-inputs" type="button" class="text-xs text-slate-400 hover:text-slate-200 transition">
+                Limpar
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-4">
+            <!-- Part Name -->
+            <div class="sm:col-span-8">
+              <label for="input-part-name" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                Nome da Peça / Projeto
+              </label>
+              <input type="text" id="input-part-name" placeholder="Ex: Suporte Controle PS5, Vaso Geométrico..."
+                class="w-full rounded-xl bg-slate-950 border border-slate-700/90 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition" />
+            </div>
+
+            <!-- Quantity -->
+            <div class="sm:col-span-4">
+              <label for="input-qty" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                Quantidade
+              </label>
+              <div class="flex items-center rounded-xl bg-slate-950 border border-slate-700/90 focus-within:border-orange-500 overflow-hidden">
+                <button type="button" id="btn-qty-minus" class="px-3 py-2.5 text-slate-400 hover:text-white hover:bg-slate-800 font-bold transition">-</button>
+                <input type="number" id="input-qty" value="1" min="1" step="1"
+                  class="w-full bg-transparent text-center font-mono text-sm font-semibold text-white outline-none" />
+                <button type="button" id="btn-qty-plus" class="px-3 py-2.5 text-slate-400 hover:text-white hover:bg-slate-800 font-bold transition">+</button>
+              </div>
+            </div>
+
+            <!-- Filament Weight (g) -->
+            <div class="sm:col-span-4">
+              <label for="input-grams" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                Filamento Total (g)
+              </label>
+              <div class="relative">
+                <input type="number" id="input-grams" value="135" min="0" step="0.1"
+                  class="w-full rounded-xl bg-slate-950 border border-slate-700/90 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 pl-3.5 pr-9 py-2.5 font-mono text-base font-bold text-orange-400 outline-none transition" />
+                <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-500 font-semibold">g</span>
+              </div>
+            </div>
+
+            <!-- Print Time: Hours & Minutes -->
+            <div class="sm:col-span-5">
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                Tempo (Horas e Minutos)
+              </label>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="relative">
+                  <input type="number" id="input-hours" value="8" min="0" step="1"
+                    class="w-full rounded-xl bg-slate-950 border border-slate-700/90 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 pl-3 pr-8 py-2.5 font-mono text-base font-bold text-white outline-none transition" />
+                  <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-500">h</span>
+                </div>
+                <div class="relative">
+                  <input type="number" id="input-minutes" value="0" min="0" max="59" step="1"
+                    class="w-full rounded-xl bg-slate-950 border border-slate-700/90 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 pl-3 pr-10 py-2.5 font-mono text-base font-bold text-white outline-none transition" />
+                  <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-500">min</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Print Time: Decimal Hours (Synced) -->
+            <div class="sm:col-span-3">
+              <label for="input-decimal-hours" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5" title="Tempo convertido em horas decimais conforme a planilha">
+                Horas Decimal
+              </label>
+              <div class="relative">
+                <input type="number" id="input-decimal-hours" value="8.00" min="0" step="0.01"
+                  class="w-full rounded-xl bg-slate-950/70 border border-slate-700/90 focus:border-orange-500 pl-3 pr-7 py-2.5 font-mono text-base font-semibold text-slate-300 outline-none transition" />
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-500">h</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. Profit Margin & Negotiation Control -->
+        <section class="rounded-2xl bg-gradient-to-b from-slate-900 to-slate-900/95 border border-orange-500/30 p-5 sm:p-6 shadow-xl">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div class="flex items-center gap-2.5">
+              <span class="w-7 h-7 rounded-lg bg-orange-500 text-white flex items-center justify-center font-mono text-xs font-bold shadow-md shadow-orange-500/30">03</span>
+              <div>
+                <h2 class="text-base sm:text-lg font-bold text-white">Margem de Lucro & Negociação</h2>
+                <p class="text-xs text-slate-400">Ajuste a taxa em tempo real durante a conversa com o cliente</p>
+              </div>
+            </div>
+
+            <!-- Direct numeric profit input -->
+            <div class="flex items-center gap-2 bg-slate-950 border border-orange-500/40 rounded-xl px-3 py-1.5">
+              <span class="text-xs text-slate-400 font-medium">Lucro:</span>
+              <input type="number" id="input-profit-pct" value="100" min="0" max="1000" step="1"
+                class="w-16 bg-transparent text-right font-mono text-lg font-extrabold text-orange-400 outline-none" />
+              <span class="font-mono text-sm font-bold text-orange-400">%</span>
+            </div>
+          </div>
+
+          <!-- Slider -->
+          <div class="my-4">
+            <input type="range" id="slider-profit-pct" min="0" max="300" value="100" step="1"
+              class="w-full accent-orange-500 bg-slate-800 rounded-lg h-2" />
+            <div class="flex justify-between text-[11px] font-mono text-slate-500 mt-1.5">
+              <span>0% (Custo)</span>
+              <span>50%</span>
+              <span>100% (Padrão)</span>
+              <span>150%</span>
+              <span>200%</span>
+              <span>300%</span>
+            </div>
+          </div>
+
+          <!-- Quick Presets -->
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-4">
+            <button type="button" data-margin="0" class="margin-preset-btn px-2.5 py-2 rounded-xl border border-slate-700/80 bg-slate-950/70 hover:border-slate-500 text-xs font-semibold text-slate-300 transition flex flex-col items-center">
+              <span>Custo</span>
+              <span class="font-mono text-[11px] text-slate-400">0%</span>
+            </button>
+            <button type="button" data-margin="50" class="margin-preset-btn px-2.5 py-2 rounded-xl border border-slate-700/80 bg-slate-950/70 hover:border-amber-500/50 text-xs font-semibold text-amber-300 transition flex flex-col items-center">
+              <span>Mínimo</span>
+              <span class="font-mono text-[11px] text-amber-400/80">50%</span>
+            </button>
+            <button type="button" data-margin="75" class="margin-preset-btn px-2.5 py-2 rounded-xl border border-slate-700/80 bg-slate-950/70 hover:border-orange-500/50 text-xs font-semibold text-orange-300 transition flex flex-col items-center">
+              <span>Negociação</span>
+              <span class="font-mono text-[11px] text-orange-400/80">75%</span>
+            </button>
+            <button type="button" data-margin="100" class="margin-preset-btn px-2.5 py-2 rounded-xl border border-orange-500 bg-orange-500/15 text-xs font-bold text-orange-300 transition flex flex-col items-center">
+              <span>Padrão</span>
+              <span class="font-mono text-[11px] text-orange-400">100%</span>
+            </button>
+            <button type="button" data-margin="150" class="margin-preset-btn col-span-2 sm:col-span-1 px-2.5 py-2 rounded-xl border border-slate-700/80 bg-slate-950/70 hover:border-emerald-500/50 text-xs font-semibold text-emerald-300 transition flex flex-col items-center">
+              <span>Premium</span>
+              <span class="font-mono text-[11px] text-emerald-400/80">150%</span>
+            </button>
+          </div>
+
+          <!-- Discount Simulator Bar -->
+          <div class="mt-5 pt-4 border-t border-slate-800/80">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+              <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                Simulador de Desconto (sobre o preço atual):
+              </span>
+              <div class="flex items-center gap-1.5">
+                <button type="button" data-discount="0" class="discount-btn px-2 py-1 rounded-lg text-xs font-mono font-semibold bg-orange-500 text-white">Sem desc.</button>
+                <button type="button" data-discount="5" class="discount-btn px-2 py-1 rounded-lg text-xs font-mono font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700">-5%</button>
+                <button type="button" data-discount="10" class="discount-btn px-2 py-1 rounded-lg text-xs font-mono font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700">-10%</button>
+                <button type="button" data-discount="15" class="discount-btn px-2 py-1 rounded-lg text-xs font-mono font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700">-15%</button>
+                <button type="button" data-discount="20" class="discount-btn px-2 py-1 rounded-lg text-xs font-mono font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700">-20%</button>
+              </div>
+            </div>
+
+            <div id="discount-feedback" class="rounded-xl bg-slate-950/90 border border-slate-800 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span class="text-slate-400">Aplicando <strong id="sim-discount-label" class="text-white">0%</strong> de desconto na venda direta:</span>
+              <div class="flex items-center gap-3 font-mono">
+                <span>Preço: <strong id="sim-final-price" class="text-white">R$ 0,00</strong></span>
+                <span>Margem real: <strong id="sim-effective-margin" class="text-emerald-400">100,0%</strong></span>
+                <span>Lucro: <strong id="sim-net-profit" class="text-emerald-400">R$ 0,00</strong></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- RIGHT COLUMN (5 cols on lg): Live Breakdown + Final Prices + Multi-Item Order Cart -->
+      <div class="lg:col-span-5 flex flex-col gap-6">
+
+        <!-- 4. Final Pricing Cards (Hero Output) -->
+        <section class="rounded-2xl bg-slate-900 border border-slate-800 p-5 sm:p-6 shadow-xl">
+          <div class="flex items-center justify-between gap-2 mb-4">
+            <h2 class="text-base sm:text-lg font-bold text-white">Resultado do Orçamento</h2>
+            <label class="inline-flex items-center gap-2 cursor-pointer select-none text-xs text-slate-300 bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-800">
+              <input type="checkbox" id="toggle-include-shipping-direct" class="rounded text-orange-500 focus:ring-orange-500 bg-slate-800 border-slate-600" />
+              <span>Somar envio (<span id="label-shipping-val">R$ 5,00</span>) no Pix</span>
+            </label>
+          </div>
+
+          <!-- Primary Cards Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-4">
+            <!-- Direct Sale / Pix -->
+            <div class="rounded-xl bg-gradient-to-br from-emerald-950/60 to-slate-950 border border-emerald-500/40 p-4 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between gap-1">
+                  <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Venda Direta / Pix</span>
+                  <span id="badge-profit-pct" class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">+100%</span>
+                </div>
+                <div id="out-direct-price" class="font-mono text-2xl sm:text-3xl font-extrabold text-white mt-2">
+                  R$ 44,50
+                </div>
+                <div id="out-direct-unit-sub" class="text-[11px] text-slate-400 font-mono mt-0.5">
+                  Unitário: R$ 44,50
+                </div>
+              </div>
+              <div class="mt-3 pt-2.5 border-t border-emerald-500/20 flex items-center justify-between text-xs">
+                <span class="text-slate-400">Lucro Líquido:</span>
+                <span id="out-net-profit" class="font-mono font-bold text-emerald-400">+ R$ 22,25</span>
+              </div>
+            </div>
+
+            <!-- Marketplace (Shopee / ML) -->
+            <div class="rounded-xl bg-gradient-to-br from-orange-950/50 to-slate-950 border border-orange-500/40 p-4 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between gap-1">
+                  <span class="text-xs font-bold uppercase tracking-wider text-orange-400">Shopee / ML</span>
+                  <span id="badge-mkt-pct" class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300">+20% taxa</span>
+                </div>
+                <div id="out-marketplace-price" class="font-mono text-2xl sm:text-3xl font-extrabold text-white mt-2">
+                  R$ 59,40
+                </div>
+                <div id="out-marketplace-unit-sub" class="text-[11px] text-slate-400 font-mono mt-0.5">
+                  Inclui envio + taxa mkt
+                </div>
+              </div>
+              <div class="mt-3 pt-2.5 border-t border-orange-500/20 flex items-center justify-between text-xs">
+                <span class="text-slate-400">Taxa Mkt (<span id="out-mkt-rate-label">20%</span>):</span>
+                <span id="out-mkt-fee" class="font-mono font-semibold text-orange-300">R$ 9,90</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons: Add to Cart & Copy Single Quote -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <button id="btn-add-to-order" type="button" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-[0.99] text-white font-bold text-sm shadow-lg shadow-orange-500/25 transition">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Adicionar ao Pedido</span>
+            </button>
+
+            <button id="btn-copy-single-whatsapp" type="button" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-bold text-sm shadow-lg shadow-emerald-600/20 transition">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+              </svg>
+              <span>Copiar p/ WhatsApp</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- 5. Detailed Spreadsheet Breakdown -->
+        <section class="rounded-2xl bg-slate-900/90 border border-slate-800 p-5 sm:p-6 shadow-xl">
+          <div class="flex items-center justify-between mb-3.5">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300">Detalhamento da Planilha (Unitário)</h3>
+            <button id="btn-copy-tech" type="button" class="text-xs font-medium text-orange-400 hover:text-orange-300 flex items-center gap-1 transition">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Copiar Resumo Técnico
+            </button>
+          </div>
+
+          <div class="space-y-2 text-xs sm:text-sm font-mono">
+            <div class="flex justify-between py-1.5 border-b border-slate-800/70">
+              <span class="text-slate-400 font-sans">1. Custo Filamento (<span id="bd-grams">135</span>g)</span>
+              <span id="bd-filament-cost" class="text-slate-200 font-semibold">R$ 13,23</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-slate-800/70">
+              <span class="text-slate-400 font-sans">2. Consumo Energia (<span id="bd-kwh">1,20</span> kWh)</span>
+              <span id="bd-energy-cost" class="text-slate-200 font-semibold">R$ 1,08</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-slate-800/70 bg-slate-950/50 px-2 rounded">
+              <span class="text-slate-300 font-sans font-medium">3. Custo da Produção (Mat + Energ)</span>
+              <span id="bd-prod-cost" class="text-white font-bold">R$ 14,31</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-slate-800/70">
+              <span class="text-slate-400 font-sans">4. Depreciação Máquina (<span id="bd-hours-dep">8,00</span>h)</span>
+              <span id="bd-depreciation" class="text-slate-200 font-semibold">R$ 6,00</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-slate-800/70">
+              <span class="text-slate-400 font-sans">5. Mão de Obra (Acabamento/Setup)</span>
+              <span id="bd-labor" class="text-slate-200 font-semibold">R$ 2,00</span>
+            </div>
+            <div class="flex justify-between py-2 px-2.5 rounded-lg bg-slate-800/70 border border-slate-700/80">
+              <span class="text-amber-300 font-sans font-bold">6. Total Sem Lucro (Custo Base)</span>
+              <span id="bd-total-no-profit" class="text-amber-300 font-extrabold">R$ 22,31</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-slate-800/70 pt-2">
+              <span class="text-slate-400 font-sans">7. Valor com Lucro (<span id="bd-profit-pct">100</span>%)</span>
+              <span id="bd-with-profit" class="text-emerald-400 font-bold">R$ 44,62</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-slate-800/70">
+              <span class="text-slate-400 font-sans">8. Subtotal + Envio/Embalagem (<span id="bd-ship-label">R$ 5,00</span>)</span>
+              <span id="bd-subtotal-ship" class="text-slate-200">R$ 49,62</span>
+            </div>
+            <div class="flex justify-between py-1.5">
+              <span class="text-slate-400 font-sans">9. Final Marketplace (+<span id="bd-mkt-pct">20</span>%)</span>
+              <span id="bd-mkt-final" class="text-orange-400 font-bold">R$ 59,54</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6. Multi-Item Order Cart -->
+        <section class="rounded-2xl bg-slate-900/90 border border-slate-800 p-5 sm:p-6 shadow-xl">
+          <div class="flex items-center justify-between gap-2 mb-4">
+            <div class="flex items-center gap-2">
+              <h3 class="text-base font-bold text-white">Orçamento do Pedido</h3>
+              <span id="cart-count-badge" class="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-800 text-orange-400 border border-slate-700">0 itens</span>
+            </div>
+            <button id="btn-clear-cart" type="button" class="hidden text-xs text-rose-400 hover:text-rose-300 transition">
+              Limpar Pedido
+            </button>
+          </div>
+
+          <!-- Cart Items List -->
+          <div id="cart-items-container" class="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+            <div id="cart-empty-state" class="text-center py-6 px-4 rounded-xl border border-dashed border-slate-800 bg-slate-950/40">
+              <p class="text-xs text-slate-400">Nenhuma peça adicionada ao pedido ainda.</p>
+              <p class="text-[11px] text-slate-500 mt-1">Clique em <strong>"Adicionar ao Pedido"</strong> para somar múltiplas peças num único orçamento.</p>
+            </div>
+          </div>
+
+          <!-- Cart Totals & Export -->
+          <div id="cart-summary-box" class="hidden mt-4 pt-4 border-t border-slate-800 space-y-3">
+            <div class="grid grid-cols-2 gap-2 text-xs font-mono bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <div>
+                <span class="text-slate-400 font-sans block">Custo Total Pedido:</span>
+                <strong id="cart-total-cost" class="text-slate-200 text-sm">R$ 0,00</strong>
+              </div>
+              <div>
+                <span class="text-slate-400 font-sans block">Lucro Total Pedido:</span>
+                <strong id="cart-total-profit" class="text-emerald-400 text-sm">R$ 0,00</strong>
+              </div>
+              <div class="pt-1 border-t border-slate-800/80">
+                <span class="text-emerald-400 font-sans font-semibold block">Total Direto / Pix:</span>
+                <strong id="cart-total-direct" class="text-white text-base">R$ 0,00</strong>
+              </div>
+              <div class="pt-1 border-t border-slate-800/80">
+                <span class="text-orange-400 font-sans font-semibold block">Total Shopee / ML:</span>
+                <strong id="cart-total-mkt" class="text-white text-base">R$ 0,00</strong>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <button id="btn-copy-cart-whatsapp" type="button" class="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition">
+                Copiar Pedido (WhatsApp)
+              </button>
+              <button id="btn-copy-cart-tech" type="button" class="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition">
+                Copiar Resumo Técnico
+              </button>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Settings Modal / Drawer -->
+  <div id="settings-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end sm:items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <!-- Backdrop -->
+      <div id="settings-backdrop" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs transition-opacity"></div>
+
+      <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+      <!-- Modal Panel -->
+      <div class="relative inline-block align-bottom bg-slate-900 border border-slate-700 rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full p-6">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+          <div>
+            <h3 class="text-lg font-bold text-white" id="modal-title">Configurações de Custos Base</h3>
+            <p class="text-xs text-slate-400">Parâmetros padrão da sua planilha (salvos automaticamente)</p>
+          </div>
+          <button id="btn-close-settings" type="button" class="rounded-lg p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 transition">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="mt-4 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Preço do Rolo 1kg (R$)</label>
+              <input type="number" id="cfg-spool-price" step="0.50" min="0"
+                class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:border-orange-500 outline-none" />
+              <span class="text-[11px] text-slate-500">Planilha: R$ 98,00 / kg</span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Potência Impressora (W)</label>
+              <input type="number" id="cfg-watts" step="5" min="0"
+                class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:border-orange-500 outline-none" />
+              <span class="text-[11px] text-slate-500">Planilha: 150 W</span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Tarifa Energia (R$/kWh)</label>
+              <input type="number" id="cfg-kwh-rate" step="0.01" min="0"
+                class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:border-orange-500 outline-none" />
+              <span class="text-[11px] text-slate-500">Planilha Enel SP: R$ 0,90</span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Depreciação (R$/hora)</label>
+              <input type="number" id="cfg-depreciation" step="0.05" min="0"
+                class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:border-orange-500 outline-none" />
+              <span class="text-[11px] text-slate-500">Planilha: R$ 0,75 / h</span>
+            </div>
+
+            <div class="sm:col-span-2 bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="text-xs font-semibold text-slate-300">Mão de Obra (Acabamento/Setup)</label>
+                <select id="cfg-labor-mode" class="rounded-lg bg-slate-900 border border-slate-700 px-2 py-1 text-xs text-orange-400 font-medium outline-none">
+                  <option value="hourly">Por Hora (Planilha: R$/h)</option>
+                  <option value="fixed">Valor Fixo por Peça (R$)</option>
+                </select>
+              </div>
+              <input type="number" id="cfg-labor-val" step="0.05" min="0"
+                class="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:border-orange-500 outline-none" />
+              <span class="text-[11px] text-slate-500 block mt-1">Padrão da planilha: R$ 0,25 por hora de impressão</span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Envio / Embalagem (R$)</label>
+              <input type="number" id="cfg-shipping" step="0.50" min="0"
+                class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:border-orange-500 outline-none" />
+              <span class="text-[11px] text-slate-500">Planilha: R$ 5,00</span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Taxa Marketplace (%)</label>
+              <input type="number" id="cfg-marketplace-pct" step="1" min="0" max="100"
+                class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:border-orange-500 outline-none" />
+              <span class="text-[11px] text-slate-500">Planilha Shopee/ML: 20%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between gap-3">
+          <button id="btn-restore-defaults" type="button" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition">
+            Restaurar Padrão Planilha
+          </button>
+          <button id="btn-save-settings" type="button" class="px-5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition">
+            Salvar e Aplicar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * ============================================================================
+     * ORÇAMENTO 3D PRO — Lógica de Cálculo, OCR via Gemini API e Negociação
+     * ============================================================================
+     */
+
+    // 1. Parâmetros padrão exatos da planilha
+    const DEFAULT_CONFIG = {
+      spoolPrice: 98.00,       // R$ 98,00 / kg (135g -> R$ 13,23 | 340g -> R$ 33,32)
+      watts: 150,              // 150 W
+      kwhRate: 0.90,           // R$ 0,90 / kWh (Enel SP)
+      depreciationRate: 0.75,  // R$ 0,75 / hora (8h -> R$ 6,00 | 13,4h -> R$ 10,05)
+      laborMode: 'hourly',     // 'hourly' (R$ 0,25/h) ou 'fixed'
+      laborValue: 0.25,        // R$ 0,25 / hora (8h -> R$ 2,00 | 13,4h -> R$ 3,35)
+      shippingFee: 5.00,       // R$ 5,00 embalagem/envio
+      marketplacePct: 20.0     // 20% Shopee / Mercado Livre
+    };
+
+    const STORAGE_KEY_CFG = 'orcamento3d_config_v1';
+    const STORAGE_KEY_CART = 'orcamento3d_cart_v1';
+
+    // Estado global da aplicação
+    let config = loadConfig();
+    let cart = loadCart();
+    let currentImageBase64 = null;
+    let currentImageMime = 'image/png';
+    let selectedDiscountPct = 0;
+
+    // Referências do DOM
+    const el = {
+      // Dropzone & OCR
+      dropzone: document.getElementById('dropzone'),
+      fileInput: document.getElementById('file-input'),
+      dropzoneEmpty: document.getElementById('dropzone-empty'),
+      dropzonePreview: document.getElementById('dropzone-preview'),
+      previewImg: document.getElementById('preview-img'),
+      ocrLoading: document.getElementById('ocr-loading'),
+      ocrBadge: document.getElementById('ocr-badge'),
+      ocrSlicerTag: document.getElementById('ocr-slicer-tag'),
+      ocrSummaryText: document.getElementById('ocr-summary-text'),
+      btnReanalyze: document.getElementById('btn-reanalyze'),
+      btnClearImage: document.getElementById('btn-clear-image'),
+
+      // Entradas da Peça
+      partName: document.getElementById('input-part-name'),
+      qty: document.getElementById('input-qty'),
+      btnQtyMinus: document.getElementById('btn-qty-minus'),
+      btnQtyPlus: document.getElementById('btn-qty-plus'),
+      grams: document.getElementById('input-grams'),
+      hours: document.getElementById('input-hours'),
+      minutes: document.getElementById('input-minutes'),
+      decimalHours: document.getElementById('input-decimal-hours'),
+      btnLoadExample: document.getElementById('btn-load-example'),
+      btnResetInputs: document.getElementById('btn-reset-inputs'),
+
+      // Negociação & Lucro
+      profitPctInput: document.getElementById('input-profit-pct'),
+      profitPctSlider: document.getElementById('slider-profit-pct'),
+      presetBtns: document.querySelectorAll('.margin-preset-btn'),
+      discountBtns: document.querySelectorAll('.discount-btn'),
+      simDiscountLabel: document.getElementById('sim-discount-label'),
+      simFinalPrice: document.getElementById('sim-final-price'),
+      simEffectiveMargin: document.getElementById('sim-effective-margin'),
+      simNetProfit: document.getElementById('sim-net-profit'),
+
+      // Saídas Principais
+      toggleShippingDirect: document.getElementById('toggle-include-shipping-direct'),
+      labelShippingVal: document.getElementById('label-shipping-val'),
+      badgeProfitPct: document.getElementById('badge-profit-pct'),
+      outDirectPrice: document.getElementById('out-direct-price'),
+      outDirectUnitSub: document.getElementById('out-direct-unit-sub'),
+      outNetProfit: document.getElementById('out-net-profit'),
+      badgeMktPct: document.getElementById('badge-mkt-pct'),
+      outMarketplacePrice: document.getElementById('out-marketplace-price'),
+      outMarketplaceUnitSub: document.getElementById('out-marketplace-unit-sub'),
+      outMktRateLabel: document.getElementById('out-mkt-rate-label'),
+      outMktFee: document.getElementById('out-mkt-fee'),
+
+      // Detalhamento da Planilha
+      bdGrams: document.getElementById('bd-grams'),
+      bdFilamentCost: document.getElementById('bd-filament-cost'),
+      bdKwh: document.getElementById('bd-kwh'),
+      bdEnergyCost: document.getElementById('bd-energy-cost'),
+      bdProdCost: document.getElementById('bd-prod-cost'),
+      bdHoursDep: document.getElementById('bd-hours-dep'),
+      bdDepreciation: document.getElementById('bd-depreciation'),
+      bdLabor: document.getElementById('bd-labor'),
+      bdTotalNoProfit: document.getElementById('bd-total-no-profit'),
+      bdProfitPct: document.getElementById('bd-profit-pct'),
+      bdWithProfit: document.getElementById('bd-with-profit'),
+      bdShipLabel: document.getElementById('bd-ship-label'),
+      bdSubtotalShip: document.getElementById('bd-subtotal-ship'),
+      bdMktPct: document.getElementById('bd-mkt-pct'),
+      bdMktFinal: document.getElementById('bd-mkt-final'),
+
+      // Ações & Carrinho
+      btnAddToOrder: document.getElementById('btn-add-to-order'),
+      btnCopySingleWhatsapp: document.getElementById('btn-copy-single-whatsapp'),
+      btnCopyTech: document.getElementById('btn-copy-tech'),
+      cartCountBadge: document.getElementById('cart-count-badge'),
+      btnClearCart: document.getElementById('btn-clear-cart'),
+      cartItemsContainer: document.getElementById('cart-items-container'),
+      cartEmptyState: document.getElementById('cart-empty-state'),
+      cartSummaryBox: document.getElementById('cart-summary-box'),
+      cartTotalCost: document.getElementById('cart-total-cost'),
+      cartTotalProfit: document.getElementById('cart-total-profit'),
+      cartTotalDirect: document.getElementById('cart-total-direct'),
+      cartTotalMkt: document.getElementById('cart-total-mkt'),
+      btnCopyCartWhatsapp: document.getElementById('btn-copy-cart-whatsapp'),
+      btnCopyCartTech: document.getElementById('btn-copy-cart-tech'),
+
+      // Modal Configurações
+      settingsModal: document.getElementById('settings-modal'),
+      settingsBackdrop: document.getElementById('settings-backdrop'),
+      btnOpenSettings: document.getElementById('btn-open-settings'),
+      btnCloseSettings: document.getElementById('btn-close-settings'),
+      cfgSpoolPrice: document.getElementById('cfg-spool-price'),
+      cfgWatts: document.getElementById('cfg-watts'),
+      cfgKwhRate: document.getElementById('cfg-kwh-rate'),
+      cfgDepreciation: document.getElementById('cfg-depreciation'),
+      cfgLaborMode: document.getElementById('cfg-labor-mode'),
+      cfgLaborVal: document.getElementById('cfg-labor-val'),
+      cfgShipping: document.getElementById('cfg-shipping'),
+      cfgMarketplacePct: document.getElementById('cfg-marketplace-pct'),
+      btnRestoreDefaults: document.getElementById('btn-restore-defaults'),
+      btnSaveSettings: document.getElementById('btn-save-settings'),
+    };
+
+    // ============================================================================
+    // UTILITÁRIOS DE FORMATAÇÃO E STORAGE
+    // ============================================================================
+
+    function formatBRL(value) {
+      const num = isFinite(value) ? value : 0;
+      return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function formatNum(value, decimals = 2) {
+      const num = isFinite(value) ? value : 0;
+      return num.toLocaleString('pt-BR', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+      });
+    }
+
+    function loadConfig() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY_CFG);
+        if (saved) return { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
+      } catch (e) {
+        console.warn('Erro ao ler configurações:', e);
+      }
+      return { ...DEFAULT_CONFIG };
+    }
+
+    function saveConfigToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY_CFG, JSON.stringify(config));
+      } catch (e) {
+        console.warn('Erro ao salvar configurações:', e);
+      }
+    }
+
+    function loadCart() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY_CART);
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.warn('Erro ao ler carrinho:', e);
+      }
+      return [];
+    }
+
+    function saveCartToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY_CART, JSON.stringify(cart));
+      } catch (e) {
+        console.warn('Erro ao salvar carrinho:', e);
+      }
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const colors = type === 'error'
+        ? 'bg-rose-950/95 border-rose-500/50 text-rose-200'
+        : type === 'info'
+          ? 'bg-slate-900/95 border-orange-500/50 text-orange-200'
+          : 'bg-emerald-950/95 border-emerald-500/50 text-emerald-200';
+
+      toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-2xl text-xs sm:text-sm font-medium backdrop-blur-md transition-all duration-300 translate-y-2 opacity-0 ${colors}`;
+      toast.innerHTML = `<span>${message}</span>`;
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    function copyTextToClipboard(text, successMsg = 'Copiado para a área de transferência!') {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast(successMsg, 'success');
+      } catch (err) {
+        showToast('Não foi possível copiar automaticamente.', 'error');
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+
+    // ============================================================================
+    // SINCRONIZAÇÃO DE TEMPO (HORAS/MINUTOS <-> HORAS DECIMAIS)
+    // ============================================================================
+
+    function syncDecimalFromHM() {
+      const h = Math.max(0, parseFloat(el.hours.value) || 0);
+      const m = Math.max(0, parseFloat(el.minutes.value) || 0);
+      const dec = h + (m / 60);
+      el.decimalHours.value = dec.toFixed(2);
+      recalculate();
+    }
+
+    function syncHMFromDecimal() {
+      const dec = Math.max(0, parseFloat(el.decimalHours.value) || 0);
+      const h = Math.floor(dec);
+      const m = Math.round((dec - h) * 60);
+      if (m === 60) {
+        el.hours.value = h + 1;
+        el.minutes.value = 0;
+      } else {
+        el.hours.value = h;
+        el.minutes.value = m;
+      }
+      recalculate();
+    }
+
+    // ============================================================================
+    // MOTOR DE CÁLCULO (FÓRMULAS EXATAS DA PLANILHA)
+    // ============================================================================
+
+    function computeQuote() {
+      const qty = Math.max(1, parseInt(el.qty.value, 10) || 1);
+      const grams = Math.max(0, parseFloat(el.grams.value) || 0);
+      const timeHours = Math.max(0, parseFloat(el.decimalHours.value) || 0);
+      const profitPct = Math.max(0, parseFloat(el.profitPctInput.value) || 0);
+      const includeShippingDirect = el.toggleShippingDirect.checked;
+
+      // 1. Custo Filamento (R$) = (Preço_Rolo / 1000) * Material_g
+      const filamentCost = (config.spoolPrice / 1000) * grams;
+
+      // 2. Consumo Energia (kWh) = (Potência_W / 1000) * Tempo_h
+      const energyKwh = (config.watts / 1000) * timeHours;
+
+      // 3. Custo Energia (SP) = Consumo_kWh * Tarifa_kWh
+      const energyCost = energyKwh * config.kwhRate;
+
+      // 4. Custo da Produção = Custo_Filamento + Custo_Energia
+      const productionCost = filamentCost + energyCost;
+
+      // 5. Depreciação Máquina = Depreciação_Hora * Tempo_h
+      const depreciationCost = config.depreciationRate * timeHours;
+
+      // 6. Mão de Obra = Mão_de_Obra_Hora * Tempo_h (ou fixo se configurado)
+      const laborCost = config.laborMode === 'fixed'
+        ? config.laborValue
+        : config.laborValue * timeHours;
+
+      // 7. Total Sem Lucro (Custo Base) = Custo_Produção + Depreciação + Mão_de_Obra
+      const totalNoProfitUnit = productionCost + depreciationCost + laborCost;
+
+      // 8. Valor com Lucro (Venda Direta / Pix) = Total_Sem_Lucro * (1 + Taxa_Lucro / 100)
+      const withProfitUnit = totalNoProfitUnit * (1 + profitPct / 100);
+      const directUnitPrice = includeShippingDirect
+        ? withProfitUnit + config.shippingFee
+        : withProfitUnit;
+
+      // 9. Subtotal com Envio = Valor_com_Lucro + Taxa_Envio
+      const subtotalWithShippingUnit = withProfitUnit + config.shippingFee;
+
+      // 10. Taxa Shopee / Marketplace = Subtotal_com_Envio * (Taxa_Marketplace / 100)
+      const marketplaceFeeUnit = subtotalWithShippingUnit * (config.marketplacePct / 100);
+
+      // 11. Preço Final Marketplace (Shopee / ML) = Subtotal_com_Envio + Taxa_Shopee
+      const marketplaceFinalUnit = subtotalWithShippingUnit + marketplaceFeeUnit;
+
+      // Lucro líquido unitário (sobre a produção)
+      const netProfitUnit = withProfitUnit - totalNoProfitUnit;
+
+      // Totais multiplicados pela quantidade
+      const totalNoProfitOrder = totalNoProfitUnit * qty;
+      const directTotalOrder = directUnitPrice * qty;
+      const netProfitOrder = netProfitUnit * qty;
+      const marketplaceTotalOrder = marketplaceFinalUnit * qty;
+      const marketplaceFeeOrder = marketplaceFeeUnit * qty;
+
+      return {
+        qty,
+        grams,
+        timeHours,
+        profitPct,
+        includeShippingDirect,
+        filamentCost,
+        energyKwh,
+        energyCost,
+        productionCost,
+        depreciationCost,
+        laborCost,
+        totalNoProfitUnit,
+        withProfitUnit,
+        directUnitPrice,
+        subtotalWithShippingUnit,
+        marketplaceFeeUnit,
+        marketplaceFinalUnit,
+        netProfitUnit,
+        totalNoProfitOrder,
+        directTotalOrder,
+        netProfitOrder,
+        marketplaceTotalOrder,
+        marketplaceFeeOrder
+      };
+    }
+
+    function recalculate() {
+      const q = computeQuote();
+
+      // Atualiza cards principais
+      el.labelShippingVal.textContent = formatBRL(config.shippingFee);
+      el.badgeProfitPct.textContent = `+${formatNum(q.profitPct, 0)}%`;
+      el.outDirectPrice.textContent = formatBRL(q.directTotalOrder);
+      el.outDirectUnitSub.textContent = q.qty > 1
+        ? `${q.qty}x de ${formatBRL(q.directUnitPrice)}`
+        : `Unitário: ${formatBRL(q.directUnitPrice)}`;
+      el.outNetProfit.textContent = `+ ${formatBRL(q.netProfitOrder)}`;
+
+      el.badgeMktPct.textContent = `+${formatNum(config.marketplacePct, 0)}% taxa`;
+      el.outMarketplacePrice.textContent = formatBRL(q.marketplaceTotalOrder);
+      el.outMarketplaceUnitSub.textContent = q.qty > 1
+        ? `${q.qty}x de ${formatBRL(q.marketplaceFinalUnit)}`
+        : `Inclui envio (${formatBRL(config.shippingFee)}) + taxa`;
+      el.outMktRateLabel.textContent = `${formatNum(config.marketplacePct, 0)}%`;
+      el.outMktFee.textContent = formatBRL(q.marketplaceFeeOrder);
+
+      // Atualiza tabela de detalhamento passo a passo (unitário)
+      el.bdGrams.textContent = formatNum(q.grams, 1);
+      el.bdFilamentCost.textContent = formatBRL(q.filamentCost);
+      el.bdKwh.textContent = formatNum(q.energyKwh, 2);
+      el.bdEnergyCost.textContent = formatBRL(q.energyCost);
+      el.bdProdCost.textContent = formatBRL(q.productionCost);
+      el.bdHoursDep.textContent = formatNum(q.timeHours, 2);
+      el.bdDepreciation.textContent = formatBRL(q.depreciationCost);
+      el.bdLabor.textContent = formatBRL(q.laborCost);
+      el.bdTotalNoProfit.textContent = formatBRL(q.totalNoProfitUnit);
+      el.bdProfitPct.textContent = formatNum(q.profitPct, 0);
+      el.bdWithProfit.textContent = formatBRL(q.withProfitUnit);
+      el.bdShipLabel.textContent = formatBRL(config.shippingFee);
+      el.bdSubtotalShip.textContent = formatBRL(q.subtotalWithShippingUnit);
+      el.bdMktPct.textContent = formatNum(config.marketplacePct, 0);
+      el.bdMktFinal.textContent = formatBRL(q.marketplaceFinalUnit);
+
+      // Atualiza destaque dos botões rápidos de margem
+      el.presetBtns.forEach(btn => {
+        const m = parseFloat(btn.dataset.margin);
+        if (m === q.profitPct) {
+          btn.classList.add('border-orange-500', 'bg-orange-500/15', 'text-orange-300');
+          btn.classList.remove('border-slate-700/80', 'bg-slate-950/70');
+        } else {
+          btn.classList.remove('border-orange-500', 'bg-orange-500/15', 'text-orange-300');
+          btn.classList.add('border-slate-700/80', 'bg-slate-950/70');
+        }
+      });
+
+      // Atualiza Simulador de Desconto
+      updateDiscountSimulator(q);
+    }
+
+    function updateDiscountSimulator(q) {
+      const discountFactor = 1 - (selectedDiscountPct / 100);
+      const discountedDirectOrder = q.directTotalOrder * discountFactor;
+      const shippingTotal = q.includeShippingDirect ? (config.shippingFee * q.qty) : 0;
+      const productRevenueAfterDiscount = discountedDirectOrder - shippingTotal;
+      const effectiveProfit = productRevenueAfterDiscount - q.totalNoProfitOrder;
+      const effectiveMarginPct = q.totalNoProfitOrder > 0
+        ? (effectiveProfit / q.totalNoProfitOrder) * 100
+        : 0;
+
+      el.simDiscountLabel.textContent = `${selectedDiscountPct}%`;
+      el.simFinalPrice.textContent = formatBRL(discountedDirectOrder);
+      el.simEffectiveMargin.textContent = `${formatNum(effectiveMarginPct, 1)}%`;
+      el.simNetProfit.textContent = formatBRL(effectiveProfit);
+
+      // Cor de alerta caso o desconto coma o lucro
+      if (effectiveProfit < 0) {
+        el.simEffectiveMargin.className = 'text-rose-400 font-bold';
+        el.simNetProfit.className = 'text-rose-400 font-bold';
+      } else if (effectiveMarginPct < 30) {
+        el.simEffectiveMargin.className = 'text-amber-400 font-bold';
+        el.simNetProfit.className = 'text-amber-400 font-bold';
+      } else {
+        el.simEffectiveMargin.className = 'text-emerald-400 font-bold';
+        el.simNetProfit.className = 'text-emerald-400 font-bold';
+      }
+    }
+
+    // ============================================================================
+    // EXTRAÇÃO AUTOMÁTICA VIA PRINT (GEMINI MULTIMODAL API)
+    // ============================================================================
+
+    async function handleImageFile(file) {
+      if (!file || !file.type.startsWith('image/')) {
+        showToast('Por favor, envie ou cole uma imagem válida (PNG, JPG, WebP).', 'error');
+        return;
+      }
+
+      currentImageMime = file.type || 'image/png';
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const dataUrl = e.target.result;
+        currentImageBase64 = dataUrl.split(',')[1];
+
+        el.previewImg.src = dataUrl;
+        el.dropzoneEmpty.classList.add('hidden');
+        el.dropzonePreview.classList.remove('hidden');
+
+        await analyzeScreenshotWithGemini(currentImageBase64, currentImageMime);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function analyzeScreenshotWithGemini(base64Data, mimeType) {
+      el.ocrLoading.classList.remove('hidden');
+      el.ocrBadge.className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-orange-500/15 text-orange-300 border border-orange-500/30';
+      el.ocrBadge.textContent = '⏳ Analisando print...';
+
+      const prompt = `Você é um especialista em fatiadores de impressão 3D (Bambu Studio, OrcaSlicer, PrusaSlicer, Cura, Creality Print, Simplify3D).
+Analise esta captura de tela de um fatiador 3D e extraia com precisão:
+1. "filament_grams": Peso total de filamento gasto em gramas (número decimal). Se houver peso do modelo + suportes/torre de limpeza ou "Total filament", use o peso TOTAL em gramas.
+2. "hours": Parte inteira das horas do tempo total de impressão (número inteiro). Ex: se o print mostra "13h 24m", hours = 13. Se mostra "45m", hours = 0. Se mostra "1d 2h 30m", hours = 26.
+3. "minutes": Parte dos minutos do tempo total de impressão (número inteiro de 0 a 59). Ex: se mostra "13h 24m", minutes = 24.
+4. "project_name": Nome da peça, modelo 3D ou projeto visível no título da janela, aba ou lista de objetos (string curta e limpa, ou vazio "" se não estiver visível).
+5. "slicer_detected": Nome do fatiador identificado na tela (ex: "Bambu Studio", "OrcaSlicer", "Cura", etc.).
+
+Retorne APENAS um JSON válido seguindo exatamente o schema solicitado.`;
+
+      const payload = {
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType: mimeType,
+                  data: base64Data
+                }
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: 'OBJECT',
+            properties: {
+              filament_grams: { type: 'NUMBER' },
+              hours: { type: 'INTEGER' },
+              minutes: { type: 'INTEGER' },
+              project_name: { type: 'STRING' },
+              slicer_detected: { type: 'STRING' }
+            },
+            required: ['filament_grams', 'hours', 'minutes', 'project_name', 'slicer_detected']
+          }
+        }
+      };
+
+      const apiKey = "";
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+      try {
+        const response = await fetchWithRetry(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!rawText) {
+          throw new Error('Resposta vazia da IA');
+        }
+
+        const parsed = JSON.parse(rawText);
+
+        // Preenche campos na interface
+        if (typeof parsed.filament_grams === 'number' && parsed.filament_grams > 0) {
+          el.grams.value = Number(parsed.filament_grams.toFixed(2));
+        }
+        if (typeof parsed.hours === 'number' || typeof parsed.minutes === 'number') {
+          el.hours.value = Math.max(0, Math.round(parsed.hours || 0));
+          el.minutes.value = Math.min(59, Math.max(0, Math.round(parsed.minutes || 0)));
+          syncDecimalFromHM();
+        }
+        if (parsed.project_name && parsed.project_name.trim().length > 0) {
+          el.partName.value = parsed.project_name.trim();
+        }
+
+        el.ocrBadge.className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
+        el.ocrBadge.textContent = '✓ Extraído com sucesso';
+        el.ocrSlicerTag.textContent = parsed.slicer_detected ? `(${parsed.slicer_detected})` : '';
+        el.ocrSummaryText.innerHTML = `Detectado: <strong class="text-white">${el.grams.value}g</strong> de filamento e <strong class="text-white">${el.hours.value}h ${el.minutes.value}m</strong> (${el.decimalHours.value}h).`;
+
+        recalculate();
+        showToast('Print lido com sucesso! Valores atualizados.', 'success');
+      } catch (error) {
+        console.error('Erro no OCR:', error);
+        el.ocrBadge.className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30';
+        el.ocrBadge.textContent = '⚠ Falha na leitura automática';
+        el.ocrSummaryText.textContent = 'Não foi possível ler os números do print. Você pode preencher manualmente nos campos abaixo.';
+        showToast('Erro ao ler o print. Preencha manualmente ou tente outra captura.', 'error');
+      } finally {
+        el.ocrLoading.classList.add('hidden');
+      }
+    }
+
+    async function fetchWithRetry(url, options, retries = 3, delay = 1000) {
+      for (let i = 0; i < retries; i++) {
+        try {
+          const res = await fetch(url, options);
+          if (res.ok) return res;
+          if (res.status === 429 || res.status >= 500) {
+            await new Promise(r => setTimeout(r, delay * Math.pow(2, i)));
+            continue;
+          }
+          return res;
+        } catch (err) {
+          if (i === retries - 1) throw err;
+          await new Promise(r => setTimeout(r, delay * Math.pow(2, i)));
+        }
+      }
+    }
+
+    // ============================================================================
+    // CARRINHO / ORÇAMENTO MULTI-PEÇAS
+    // ============================================================================
+
+    function addCurrentItemToCart() {
+      const q = computeQuote();
+      if (q.grams <= 0 && q.timeHours <= 0) {
+        showToast('Informe o peso ou o tempo de impressão antes de adicionar.', 'error');
+        return;
+      }
+
+      const name = (el.partName.value || '').trim() || `Peça 3D #${cart.length + 1}`;
+      const item = {
+        id: Date.now().toString(),
+        name,
+        qty: q.qty,
+        grams: q.grams,
+        timeHours: q.timeHours,
+        profitPct: q.profitPct,
+        unitCost: q.totalNoProfitUnit,
+        unitDirect: q.directUnitPrice,
+        unitMkt: q.marketplaceFinalUnit,
+        totalCost: q.totalNoProfitOrder,
+        totalDirect: q.directTotalOrder,
+        totalMkt: q.marketplaceTotalOrder,
+        totalProfit: q.netProfitOrder
+      };
+
+      cart.push(item);
+      saveCartToStorage();
+      renderCart();
+      showToast(`"${name}" adicionado ao pedido!`, 'success');
+    }
+
+    function removeCartItem(id) {
+      cart = cart.filter(item => item.id !== id);
+      saveCartToStorage();
+      renderCart();
+    }
+
+    function renderCart() {
+      const totalItemsCount = cart.reduce((acc, item) => acc + item.qty, 0);
+      el.cartCountBadge.textContent = `${totalItemsCount} ${totalItemsCount === 1 ? 'peça' : 'peças'}`;
+
+      if (cart.length === 0) {
+        el.cartEmptyState.classList.remove('hidden');
+        el.cartSummaryBox.classList.add('hidden');
+        el.btnClearCart.classList.add('hidden');
+        // Remove rendered items except empty state
+        Array.from(el.cartItemsContainer.children).forEach(child => {
+          if (child.id !== 'cart-empty-state') child.remove();
+        });
+        return;
+      }
+
+      el.cartEmptyState.classList.add('hidden');
+      el.cartSummaryBox.classList.remove('hidden');
+      el.btnClearCart.classList.remove('hidden');
+
+      // Limpa itens anteriores
+      Array.from(el.cartItemsContainer.children).forEach(child => {
+        if (child.id !== 'cart-empty-state') child.remove();
+      });
+
+      let sumCost = 0;
+      let sumProfit = 0;
+      let sumDirect = 0;
+      let sumMkt = 0;
+
+      cart.forEach(item => {
+        sumCost += item.totalCost;
+        sumProfit += item.totalProfit;
+        sumDirect += item.totalDirect;
+        sumMkt += item.totalMkt;
+
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-950/90 border border-slate-800 hover:border-slate-700 transition';
+        row.innerHTML = `
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <span class="px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400 font-mono text-[11px] font-bold">${item.qty}x</span>
+              <p class="text-xs sm:text-sm font-semibold text-white truncate">${escapeHtml(item.name)}</p>
+            </div>
+            <p class="text-[11px] font-mono text-slate-400 mt-1">
+              ${formatNum(item.grams, 0)}g • ${formatNum(item.timeHours, 2)}h • Margem ${formatNum(item.profitPct, 0)}%
+            </p>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="font-mono text-xs sm:text-sm font-bold text-emerald-400">${formatBRL(item.totalDirect)}</div>
+            <div class="font-mono text-[11px] text-slate-500">Mkt: ${formatBRL(item.totalMkt)}</div>
+          </div>
+          <button type="button" data-remove-id="${item.id}" title="Remover item" class="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-900 transition">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        `;
+        el.cartItemsContainer.appendChild(row);
+      });
+
+      el.cartTotalCost.textContent = formatBRL(sumCost);
+      el.cartTotalProfit.textContent = `+ ${formatBRL(sumProfit)}`;
+      el.cartTotalDirect.textContent = formatBRL(sumDirect);
+      el.cartTotalMkt.textContent = formatBRL(sumMkt);
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // ============================================================================
+    // EXPORTAÇÃO DE TEXTOS (WHATSAPP CLIENTE & RESUMO TÉCNICO)
+    // ============================================================================
+
+    function buildSingleWhatsAppText() {
+      const q = computeQuote();
+      const name = (el.partName.value || '').trim() || 'Peça Personalizada 3D';
+      const discountFactor = 1 - (selectedDiscountPct / 100);
+      const finalDirect = q.directTotalOrder * discountFactor;
+
+      let lines = [
+        `*ORÇAMENTO DE IMPRESSÃO 3D*`,
+        ``,
+        `*Item:* ${q.qty}x ${name}`,
+        `*Material:* PLA / PETG (${formatNum(q.grams * q.qty, 0)}g total)`,
+        `*Tempo estimado de produção:* ${formatNum(q.timeHours * q.qty, 1)}h`,
+        ``,
+        `*Valor Venda Direta (Pix):* ${formatBRL(finalDirect)}${selectedDiscountPct > 0 ? ` _(com ${selectedDiscountPct}% de desconto aplicado)_` : ''}`,
+        `*Valor via Shopee / Mercado Livre:* ${formatBRL(q.marketplaceTotalOrder)}`,
+        ``,
+        `_Valores sujeitos à confirmação de cor e prazo de entrega._`
+      ];
+      return lines.join('\n');
+    }
+
+    function buildSingleTechSummary() {
+      const q = computeQuote();
+      const name = (el.partName.value || '').trim() || 'Peça 3D';
+      return [
+        `RESUMO TÉCNICO — ${name} (${q.qty}x)`,
+        `• Filamento: ${formatNum(q.grams, 1)}g/un -> ${formatBRL(q.filamentCost)}`,
+        `• Energia (${formatNum(q.energyKwh, 2)} kWh): ${formatBRL(q.energyCost)}`,
+        `• Depreciação (${formatNum(q.timeHours, 2)}h): ${formatBRL(q.depreciationCost)}`,
+        `• Mão de Obra: ${formatBRL(q.laborCost)}`,
+        `• Custo Base Sem Lucro (un): ${formatBRL(q.totalNoProfitUnit)}`,
+        `• Margem Aplicada: ${formatNum(q.profitPct, 0)}% (Lucro total: ${formatBRL(q.netProfitOrder)})`,
+        `• Final Pix (${q.qty}x): ${formatBRL(q.directTotalOrder)} | Marketplace (${q.qty}x): ${formatBRL(q.marketplaceTotalOrder)}`
+      ].join('\n');
+    }
+
+    function buildCartWhatsAppText() {
+      if (cart.length === 0) return '';
+      let sumDirect = 0;
+      let sumMkt = 0;
+      const itemLines = cart.map((item, idx) => {
+        sumDirect += item.totalDirect;
+        sumMkt += item.totalMkt;
+        return `${idx + 1}. *${item.qty}x ${item.name}* — ${formatBRL(item.totalDirect)} (Pix) | ${formatBRL(item.totalMkt)} (Shopee/ML)`;
+      });
+
+      return [
+        `*ORÇAMENTO DO PEDIDO — IMPRESSÃO 3D*`,
+        ``,
+        ...itemLines,
+        ``,
+        `*Total Venda Direta (Pix):* ${formatBRL(sumDirect)}`,
+        `*Total via Shopee / Mercado Livre:* ${formatBRL(sumMkt)}`,
+        ``,
+        `_Produção iniciada após confirmação do pedido._`
+      ].join('\n');
+    }
+
+    function buildCartTechSummary() {
+      if (cart.length === 0) return '';
+      let sumCost = 0;
+      let sumProfit = 0;
+      let sumDirect = 0;
+      let sumMkt = 0;
+      let sumGrams = 0;
+      let sumHours = 0;
+
+      const lines = cart.map((item, idx) => {
+        sumCost += item.totalCost;
+        sumProfit += item.totalProfit;
+        sumDirect += item.totalDirect;
+        sumMkt += item.totalMkt;
+        sumGrams += item.grams * item.qty;
+        sumHours += item.timeHours * item.qty;
+        return `${idx + 1}. ${item.qty}x ${item.name} (${formatNum(item.grams * item.qty, 0)}g, ${formatNum(item.timeHours * item.qty, 2)}h, +${formatNum(item.profitPct, 0)}%) -> Custo: ${formatBRL(item.totalCost)} | Pix: ${formatBRL(item.totalDirect)}`;
+      });
+
+      return [
+        `RESUMO TÉCNICO DO PEDIDO (${cart.length} itens)`,
+        ...lines,
+        `----------------------------------------`,
+        `Material Total: ${formatNum(sumGrams, 1)}g | Tempo Máquina Total: ${formatNum(sumHours, 2)}h`,
+        `Custo Base Total: ${formatBRL(sumCost)}`,
+        `Lucro Líquido Total: ${formatBRL(sumProfit)}`,
+        `Total Pix: ${formatBRL(sumDirect)} | Total Marketplace: ${formatBRL(sumMkt)}`
+      ].join('\n');
+    }
+
+    // ============================================================================
+    // MODAL DE CONFIGURAÇÕES BASE
+    // ============================================================================
+
+    function openSettingsModal() {
+      el.cfgSpoolPrice.value = config.spoolPrice;
+      el.cfgWatts.value = config.watts;
+      el.cfgKwhRate.value = config.kwhRate;
+      el.cfgDepreciation.value = config.depreciationRate;
+      el.cfgLaborMode.value = config.laborMode;
+      el.cfgLaborVal.value = config.laborValue;
+      el.cfgShipping.value = config.shippingFee;
+      el.cfgMarketplacePct.value = config.marketplacePct;
+      el.settingsModal.classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      el.settingsModal.classList.add('hidden');
+    }
+
+    function saveSettingsFromModal() {
+      config.spoolPrice = Math.max(0, parseFloat(el.cfgSpoolPrice.value) || 0);
+      config.watts = Math.max(0, parseFloat(el.cfgWatts.value) || 0);
+      config.kwhRate = Math.max(0, parseFloat(el.cfgKwhRate.value) || 0);
+      config.depreciationRate = Math.max(0, parseFloat(el.cfgDepreciation.value) || 0);
+      config.laborMode = el.cfgLaborMode.value === 'fixed' ? 'fixed' : 'hourly';
+      config.laborValue = Math.max(0, parseFloat(el.cfgLaborVal.value) || 0);
+      config.shippingFee = Math.max(0, parseFloat(el.cfgShipping.value) || 0);
+      config.marketplacePct = Math.max(0, parseFloat(el.cfgMarketplacePct.value) || 0);
+
+      saveConfigToStorage();
+      recalculate();
+      closeSettingsModal();
+      showToast('Parâmetros de custo salvos e aplicados!', 'success');
+    }
+
+    // ============================================================================
+    // EVENT LISTENERS
+    // ============================================================================
+
+    function initEvents() {
+      // Global Paste (Ctrl+V) anywhere on the page
+      window.addEventListener('paste', (e) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf('image') !== -1) {
+            const blob = items[i].getAsFile();
+            if (blob) {
+              e.preventDefault();
+              handleImageFile(blob);
+              break;
+            }
+          }
+        }
+      });
+
+      // Dropzone Click & Drag/Drop
+      el.dropzone.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
+        el.fileInput.click();
+      });
+
+      el.fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          handleImageFile(e.target.files[0]);
+        }
+      });
+
+      el.dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        el.dropzone.classList.add('border-orange-500', 'bg-orange-500/5');
+      });
+
+      el.dropzone.addEventListener('dragleave', () => {
+        el.dropzone.classList.remove('border-orange-500', 'bg-orange-500/5');
+      });
+
+      el.dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        el.dropzone.classList.remove('border-orange-500', 'bg-orange-500/5');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          handleImageFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      el.btnReanalyze.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentImageBase64) {
+          analyzeScreenshotWithGemini(currentImageBase64, currentImageMime);
+        }
+      });
+
+      el.btnClearImage.addEventListener('click', (e) => {
+        e.stopPropagation();
+        currentImageBase64 = null;
+        el.fileInput.value = '';
+        el.previewImg.src = '';
+        el.dropzonePreview.classList.add('hidden');
+        el.dropzoneEmpty.classList.remove('hidden');
+      });
+
+      // Part inputs
+      el.qty.addEventListener('input', recalculate);
+      el.btnQtyMinus.addEventListener('click', () => {
+        const current = parseInt(el.qty.value, 10) || 1;
+        if (current > 1) {
+          el.qty.value = current - 1;
+          recalculate();
+        }
+      });
+      el.btnQtyPlus.addEventListener('click', () => {
+        const current = parseInt(el.qty.value, 10) || 1;
+        el.qty.value = current + 1;
+        recalculate();
+      });
+
+      el.grams.addEventListener('input', recalculate);
+      el.hours.addEventListener('input', syncDecimalFromHM);
+      el.minutes.addEventListener('input', syncDecimalFromHM);
+      el.decimalHours.addEventListener('input', syncHMFromDecimal);
+
+      el.btnLoadExample.addEventListener('click', () => {
+        el.partName.value = 'Peça Exemplo Planilha';
+        el.qty.value = 1;
+        el.grams.value = 135;
+        el.hours.value = 8;
+        el.minutes.value = 0;
+        syncDecimalFromHM();
+        showToast('Exemplo da planilha carregado (135g / 8h).', 'info');
+      });
+
+      el.btnResetInputs.addEventListener('click', () => {
+        el.partName.value = '';
+        el.qty.value = 1;
+        el.grams.value = 0;
+        el.hours.value = 0;
+        el.minutes.value = 0;
+        syncDecimalFromHM();
+      });
+
+      // Profit Margin Slider & Input
+      el.profitPctSlider.addEventListener('input', () => {
+        el.profitPctInput.value = el.profitPctSlider.value;
+        recalculate();
+      });
+
+      el.profitPctInput.addEventListener('input', () => {
+        const val = Math.max(0, parseFloat(el.profitPctInput.value) || 0);
+        el.profitPctSlider.value = Math.min(300, val);
+        recalculate();
+      });
+
+      el.presetBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const margin = btn.dataset.margin;
+          el.profitPctInput.value = margin;
+          el.profitPctSlider.value = Math.min(300, parseFloat(margin));
+          recalculate();
+        });
+      });
+
+      // Discount Simulator Buttons
+      el.discountBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedDiscountPct = parseFloat(btn.dataset.discount) || 0;
+          el.discountBtns.forEach(b => {
+            b.className = 'discount-btn px-2 py-1 rounded-lg text-xs font-mono font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700';
+          });
+          btn.className = 'discount-btn px-2 py-1 rounded-lg text-xs font-mono font-semibold bg-orange-500 text-white';
+          recalculate();
+        });
+      });
+
+      el.toggleShippingDirect.addEventListener('change', recalculate);
+
+      // Cart & Copy Buttons
+      el.btnAddToOrder.addEventListener('click', addCurrentItemToCart);
+      el.btnCopySingleWhatsapp.addEventListener('click', () => {
+        copyTextToClipboard(buildSingleWhatsAppText(), 'Orçamento copiado para o WhatsApp!');
+      });
+      el.btnCopyTech.addEventListener('click', () => {
+        copyTextToClipboard(buildSingleTechSummary(), 'Resumo técnico copiado!');
+      });
+
+      el.cartItemsContainer.addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('[data-remove-id]');
+        if (removeBtn) {
+          removeCartItem(removeBtn.dataset.removeId);
+        }
+      });
+
+      el.btnClearCart.addEventListener('click', () => {
+        cart = [];
+        saveCartToStorage();
+        renderCart();
+        showToast('Pedido limpo.', 'info');
+      });
+
+      el.btnCopyCartWhatsapp.addEventListener('click', () => {
+        copyTextToClipboard(buildCartWhatsAppText(), 'Orçamento completo do pedido copiado!');
+      });
+
+      el.btnCopyCartTech.addEventListener('click', () => {
+        copyTextToClipboard(buildCartTechSummary(), 'Resumo técnico do pedido copiado!');
+      });
+
+      // Settings Modal
+      el.btnOpenSettings.addEventListener('click', openSettingsModal);
+      el.btnCloseSettings.addEventListener('click', closeSettingsModal);
+      el.settingsBackdrop.addEventListener('click', closeSettingsModal);
+      el.btnSaveSettings.addEventListener('click', saveSettingsFromModal);
+      el.btnRestoreDefaults.addEventListener('click', () => {
+        config = { ...DEFAULT_CONFIG };
+        saveConfigToStorage();
+        openSettingsModal();
+        recalculate();
+        showToast('Valores padrão da planilha restaurados.', 'info');
+      });
+    }
+
+    // Inicialização
+    window.addEventListener('DOMContentLoaded', () => {
+      initEvents();
+      recalculate();
+      renderCart();
+    });
+  </script>
+</body>
+</html>
